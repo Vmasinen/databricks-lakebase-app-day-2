@@ -113,3 +113,26 @@ class MassiveClient:
 
         data = self.get("/v2/reference/news", params=params)
         return data.get("results", [])
+
+    def get_ticker_details(self, symbol: str) -> dict:
+        """
+        Fetch detailed information about a ticker symbol including company name,
+        description, market cap, logo, homepage, and more.
+        Returns the full response with results.
+        """
+        data = self.get(f"/v3/reference/tickers/{symbol}")
+        return data
+
+    def get_ticker_news(self, ticker: str, limit: int = 5) -> dict:
+        """
+        Fetch recent news for a ticker. Wrapper around get_news that returns
+        the full response dict (with results).
+        """
+        params: dict[str, Any] = {
+            "ticker": ticker,
+            "limit": limit,
+            "order": "desc",
+            "sort": "published_utc",
+        }
+        data = self.get("/v2/reference/news", params=params)
+        return data

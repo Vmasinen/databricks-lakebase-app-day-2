@@ -287,6 +287,121 @@ def delete_from_watchlist(symbol: str):
     return jsonify({"symbol": symbol, "email": email, "deleted": True})
 
 
+@app.route("/stock/<symbol>/details", methods=["GET"])
+def get_stock_details(symbol):
+    """
+    Fetch detailed information and recent news for a specific stock symbol.
+    """
+    symbol = symbol.strip().upper() if isinstance(symbol, str) else ""
+    
+    if not symbol or not _TICKER_RE.match(symbol):
+        return jsonify({"error": f"Invalid ticker symbol: {symbol!r}"}), 400
+    
+    client = MassiveClient()
+    details = {}
+    news = []
+    
+    try:
+        # Fetch ticker details
+        details_data = client.get_ticker_details(symbol)
+        details = details_data.get("results", {})
+    except requests.HTTPError as e:
+        logger.warning(f"Failed to fetch ticker details for {symbol}: {e}")
+        # Continue even if details fail - we might still get news
+    except Exception as e:
+        logger.error(f"Unexpected error fetching ticker details for {symbol}: {e}")
+    
+    try:
+        # Fetch recent news
+        news_data = client.get_ticker_news(symbol, limit=5)
+        news = news_data.get("results", [])
+    except requests.HTTPError as e:
+        logger.warning(f"Failed to fetch news for {symbol}: {e}")
+        # Continue even if news fails
+    except Exception as e:
+        logger.error(f"Unexpected error fetching news for {symbol}: {e}")
+    
+    # Return what we have, even if partial
+    if not details and not news:
+        return jsonify({"error": f"No data available for {symbol}. This ticker may not be available in the API or may require a different subscription tier."}), 400
+    
+    return jsonify({
+        "symbol": symbol,
+        "details": details,
+        "news": news
+    })
+
+
+@app.route("/vector-search", methods=["POST"])
+def vector_search():
+    """
+    Perform semantic search against a Databricks Vector Search endpoint.
+    
+    Expects JSON body with:
+    - query: The search query string
+    - num_results: Number of results to return (optional, default 5)
+    - endpoint_name: Vector search endpoint name (optional, from env)
+    - index_name: Vector search index name (optional, from env)
+    """
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+    
+    query = request.json.get("query", "").strip()
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+    
+    num_results = int(request.json.get("num_results", 5))
+    endpoint_name = request.json.get("endpoint_name") or os.environ.get("VECTOR_SEARCH_ENDPOINT")
+    index_name = request.json.get("index_name") or os.environ.get("VECTOR_SEARCH_INDEX")
+    
+    if not endpoint_name:
+        return jsonify({"error": "Vector search endpoint name not configured. Set VECTOR_SEARCH_ENDPOINT environment variable."}), 400
+    
+    if not index_name:
+        return jsonify({"error": "Vector search index name not configured. Set VECTOR_SEARCH_INDEX environment variable."}), 400
+    
+    email = _current_user_email()
+    logger.info(f"Vector search query from {email}: {query!r}")
+    
+    try:
+        vsc = VectorSearchClient(workspace_client=_w)
+        
+        # Get the index
+        index = vsc.get_index(endpoint_name=endpoint_name, index_name=index_name)
+        
+        # Perform similarity search
+        results = index.similarity_search(
+            query_text=query,
+            columns=["id", "text", "metadata"],
+            num_results=num_results
+        )
+        
+        # Extract results from the response
+        result_data = results.get("result", {}).get("data_array", [])
+        
+        # Format the response
+        formatted_results = []
+        for item in result_data:
+            formatted_results.append({
+                "id": item[0] if len(item) > 0 else None,
+                "text": item[1] if len(item) > 1 else None,
+                "metadata": item[2] if len(item) > 2 else None,
+                "score": item[3] if len(item) > 3 else None
+            })
+        
+        return jsonify({
+            "query": query,
+            "num_results": len(formatted_results),
+            "results": formatted_results,
+            "endpoint": endpoint_name,
+            "index": index_name
+        })
+        
+    except Exception as e:
+        logger.exception(f"Vector search failed for query {query!r}")
+        return jsonify({"error": f"Vector search failed: {str(e)}"}), 500
+
+
 def _extract_latest_price(data: dict) -> float | None:
     """Pull the trade price out of the Massive 'previous close' response shape.
 
