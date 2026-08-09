@@ -403,32 +403,60 @@
   </style>
 </head>
 <body>
-  <h1>Stock Watchlist</h1>
-  <p class="hint">Enter a single ticker symbol. This sends exactly ONE call to the Massive API to fetch the latest price, then adds it to your watchlist.</p>
+  <div class="container">
+    <h1>📈 Stock Watchlist & Vector Search</h1>
+    <p class="hint">Manage your stock watchlist and perform semantic search on financial documents.</p>
 
-  <div class="card">
-    <form id="stock-form">
-      <label for="symbol">Ticker symbol</label>
-      <input type="text" id="symbol" name="symbol" placeholder="AAPL" required>
-      <button type="submit">Add to watchlist</button>
-    </form>
+    <div class="section">
+      <form id="stock-form">
+        <label for="symbol">Ticker symbol</label>
+        <input type="text" id="symbol" name="symbol" placeholder="AAPL" required>
+        <button type="submit">Add to watchlist</button>
+      </form>
+      <div id="result"></div>
+    </div>
 
-    <div id="result"></div>
+    <div class="section">
+      <h2>Your Watchlist</h2>
+      <table id="watchlist-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Email</th>
+            <th>Latest price</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="watchlist-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>🔍 Semantic Search</h2>
+      <p class="hint">Search documents using natural language queries. The vector search endpoint will find semantically similar content.</p>
+      
+      <form id="vector-search-form">
+        <label for="search-query">Search Query</label>
+        <input type="text" id="search-query" name="query" placeholder="What are the latest trends in technology stocks..." required>
+        <button type="submit">Search</button>
+      </form>
+      
+      <div id="search-results"></div>
+    </div>
   </div>
 
-  <div class="card">
-    <table id="watchlist-table">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Email</th>
-          <th>Latest price</th>
-          <th>Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="watchlist-body"></tbody>
-    </table>
+  <!-- Stock Details Modal -->
+  <div id="stockModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Stock Details</h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="modalBody">
+        Loading...
+      </div>
+    </div>
   </div>
 
   <script>
