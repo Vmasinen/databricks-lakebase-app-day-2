@@ -13,3 +13,8 @@ env:
     value: "massive"
   - name: MASSIVE_SECRET_KEY
     value: "api-key"
+  # Vector Search Configuration
+  - name: VECTOR_SEARCH_ENDPOINT
+    value: "stock_app_vs_endpoint"  # Change this to your endpoint name
+  - name: VECTOR_SEARCH_INDEX
+    value: "main.default.ticker_news_vector_index"  # Change this to your full index name (catalog.schema.index)
