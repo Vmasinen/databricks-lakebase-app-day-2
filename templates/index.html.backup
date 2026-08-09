@@ -598,7 +598,91 @@
         
         html += '<div class="info-grid">';
         if (details.market_cap) {
-          html += '<div class="info-card"><div class="label">Market Cap</div><div class="value">$' + (details.market_cap / 1e9).toFixed(2) + 'B</div></div>';
+          html += '<div class="info-card"><div class="label">Market Cap</div><div class="value">
+        modalBody.innerHTML = `<p style="color: var(--danger);">Failed to load details: ${err.message}</p>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("stockModal").style.display = "none";
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById("stockModal");
+      if (event.target === modal) {
+        closeModal();
+      }
+    }
+
+    // Vector Search functionality
+    const searchForm = document.getElementById("vector-search-form");
+    const searchResultsEl = document.getElementById("search-results");
+
+    searchForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const query = document.getElementById("search-query").value;
+      searchResultsEl.innerHTML = "<p>Searching...</p>";
+
+      try {
+        const resp = await fetch("/vector-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, num_results: 5 }),
+        });
+        const data = await resp.json();
+        
+        if (!resp.ok) {
+          searchResultsEl.innerHTML = `<div style="padding: 16px; background: #fee; border-left: 4px solid var(--danger); border-radius: 8px;">Error: ${data.error || resp.statusText}</div>`;
+          return;
+        }
+        
+        if (data.results.length === 0) {
+          searchResultsEl.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 40px 20px;">No results found for your query.</div>';
+          return;
+        }
+        
+        let html = `<div style="margin-bottom: 16px; color: var(--muted); font-size: 14px;">Found ${data.num_results} result(s) for "<strong>${data.query}</strong>"</div>`;
+        
+        data.results.forEach((result, index) => {
+          html += '<div class="search-result">';
+          html += '<div class="search-result-header">';
+          html += `<span class="search-result-id">Result ${index + 1}</span>`;
+          if (result.score !== null && result.score !== undefined) {
+            html += `<span class="search-result-score">Score: ${result.score.toFixed(4)}</span>`;
+          }
+          html += '</div>';
+          
+          if (result.text) {
+            html += `<div class="search-result-text">${result.text}</div>`;
+          }
+          
+          if (result.id) {
+            html += `<div class="search-result-metadata">ID: ${result.id}</div>`;
+          }
+          
+          if (result.metadata) {
+            const metadataStr = typeof result.metadata === 'object' 
+              ? JSON.stringify(result.metadata) 
+              : result.metadata;
+            html += `<div class="search-result-metadata">Metadata: ${metadataStr}</div>`;
+          }
+          
+          html += '</div>';
+        });
+        
+        searchResultsEl.innerHTML = html;
+        
+      } catch (err) {
+        searchResultsEl.innerHTML = `<div style="padding: 16px; background: #fee; border-left: 4px solid var(--danger); border-radius: 8px;">Request failed: ${err.message}</div>`;
+      }
+    });
+
+    loadWatchlist();
+  </script>
+</body>
+</html>
+ + (details.market_cap / 1e9).toFixed(2) + 'B</div></div>';
         }
         if (details.sic_description) {
           html += '<div class="info-card"><div class="label">Industry</div><div class="value">' + details.sic_description + '</div></div>';
