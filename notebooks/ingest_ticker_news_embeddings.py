@@ -1,4 +1,10 @@
 # Databricks notebook source
+# DBTITLE 1,Install required packages
+# MAGIC %pip install sentence-transformers transformers torch
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC # Ingest Ticker News -> Vector Embeddings (Lakebase)
 # MAGIC
@@ -442,7 +448,9 @@ try:
     print(f"Loaded {len(news_df)} news documents from {NEWS_TABLE_NAME}")
     display(news_df.head(5))
 finally:
-    conn.close()
+    conn.close()    # Re-establish connection to avoid environment TTL issues
+    conn = psycopg2.connect(host=db_host, port=db_port, dbname=db_name, user=db_user, password=db_password, sslmode='require')
+
 
 # COMMAND ----------
 
@@ -598,60 +606,62 @@ else:
 
 # COMMAND ----------
 
-import pandas as pd
-import requests
-import trafilatura
-
-# Filter news_df for articles with URLs
-content_df = news_df[news_df['article_url'].notna() & (news_df['article_url'] != '')].copy()
-
-print(f"Fetching and chunking content from {len(content_df)} article URLs...")
-
-# Fetch and chunk article content
-out_article_ids, out_tickers, out_chunk_indexes, out_chunk_texts = [], [], [], []
-
-for idx, row in content_df.iterrows():
-    article_id = row['id']
-    ticker = row['ticker']
-    article_url = row['article_url']
-    
-    try:
-        resp = requests.get(article_url, timeout=15)
-        resp.raise_for_status()
-        text = trafilatura.extract(resp.text)
-    except Exception as e:
-        # Dead link, paywall, timeout, etc. - skip this article's
-        # content chunks rather than failing the whole job.
-        continue
-
-    if not text:
-        continue
-
-    # Split into overlapping chunks
-    for chunk_index, start in enumerate(range(0, len(text), CHUNK_SIZE - CHUNK_OVERLAP)):
-        chunk_text = text[start : start + CHUNK_SIZE].strip()
-        if not chunk_text:
-            continue
-        out_article_ids.append(article_id)
-        out_tickers.append(ticker)
-        out_chunk_indexes.append(str(chunk_index))
-        out_chunk_texts.append(chunk_text)
-        if start + CHUNK_SIZE >= len(text):
-            break
-    
-    # Progress update every 10 articles
-    if (idx + 1) % 10 == 0:
-        print(f"  Processed {idx + 1}/{len(content_df)} articles")
-
-chunks_df = pd.DataFrame({
-    "article_id": out_article_ids,
-    "ticker": out_tickers,
-    "chunk_index": out_chunk_indexes,
-    "chunk_text": out_chunk_texts,
-})
-
-print(f"Extracted {len(chunks_df)} content chunks from {len(content_df)} article URLs")
-display(chunks_df.head(5))
+# MAGIC %pip install trafilatura
+# MAGIC
+# MAGIC import pandas as pd
+# MAGIC import requests
+# MAGIC import trafilatura
+# MAGIC
+# MAGIC # Filter news_df for articles with URLs
+# MAGIC content_df = news_df[news_df['article_url'].notna() & (news_df['article_url'] != '')].copy()
+# MAGIC
+# MAGIC print(f"Fetching and chunking content from {len(content_df)} article URLs...")
+# MAGIC
+# MAGIC # Fetch and chunk article content
+# MAGIC out_article_ids, out_tickers, out_chunk_indexes, out_chunk_texts = [], [], [], []
+# MAGIC
+# MAGIC for idx, row in content_df.iterrows():
+# MAGIC     article_id = row['id']
+# MAGIC     ticker = row['ticker']
+# MAGIC     article_url = row['article_url']
+# MAGIC     
+# MAGIC     try:
+# MAGIC         resp = requests.get(article_url, timeout=15)
+# MAGIC         resp.raise_for_status()
+# MAGIC         text = trafilatura.extract(resp.text)
+# MAGIC     except Exception as e:
+# MAGIC         # Dead link, paywall, timeout, etc. - skip this article's
+# MAGIC         # content chunks rather than failing the whole job.
+# MAGIC         continue
+# MAGIC
+# MAGIC     if not text:
+# MAGIC         continue
+# MAGIC
+# MAGIC     # Split into overlapping chunks
+# MAGIC     for chunk_index, start in enumerate(range(0, len(text), CHUNK_SIZE - CHUNK_OVERLAP)):
+# MAGIC         chunk_text = text[start : start + CHUNK_SIZE].strip()
+# MAGIC         if not chunk_text:
+# MAGIC             continue
+# MAGIC         out_article_ids.append(article_id)
+# MAGIC         out_tickers.append(ticker)
+# MAGIC         out_chunk_indexes.append(str(chunk_index))
+# MAGIC         out_chunk_texts.append(chunk_text)
+# MAGIC         if start + CHUNK_SIZE >= len(text):
+# MAGIC             break
+# MAGIC     
+# MAGIC     # Progress update every 10 articles
+# MAGIC     if (idx + 1) % 10 == 0:
+# MAGIC         print(f"  Processed {idx + 1}/{len(content_df)} articles")
+# MAGIC
+# MAGIC chunks_df = pd.DataFrame({
+# MAGIC     "article_id": out_article_ids,
+# MAGIC     "ticker": out_tickers,
+# MAGIC     "chunk_index": out_chunk_indexes,
+# MAGIC     "chunk_text": out_chunk_texts,
+# MAGIC })
+# MAGIC
+# MAGIC print(f"Extracted {len(chunks_df)} content chunks from {len(content_df)} article URLs")
+# MAGIC display(chunks_df.head(5))
 
 # COMMAND ----------
 

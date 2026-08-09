@@ -139,6 +139,48 @@
     }
     .delete-btn:hover { background: var(--danger); color: #fff; }
     .delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .search-result {
+      background: #f8f9ff;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .search-result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .search-result-id {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 14px;
+    }
+    .search-result-score {
+      background: var(--accent);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .search-result-text {
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .search-result-metadata {
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+    }
+    #search-results {
+      margin-top: 20px;
+    }
+    #search-results:empty { display: none; }
   </style>
 </head>
 <body>

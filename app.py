@@ -15,6 +15,7 @@ import re
 
 import requests
 from databricks.sdk import WorkspaceClient
+from databricks.vector_search.client import VectorSearchClient
 from flask import Flask, jsonify, render_template, request
 
 import lakebase
