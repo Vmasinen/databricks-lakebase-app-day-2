@@ -488,12 +488,16 @@
             ? Number(row.latest_price).toFixed(2)
             : "-";
           const updated = row.updated_at ? new Date(row.updated_at).toLocaleString() : "-";
+          const companyName = row.company_name ? `<span class="company-name">${row.company_name}</span>` : "";
           tr.innerHTML = `
-            <td>${row.symbol}</td>
+            <td><strong>${row.symbol}</strong>${companyName}</td>
             <td>${row.email || "-"}</td>
-            <td>${price}</td>
+            <td class="price">${price}</td>
             <td>${updated}</td>
-            <td><button type="button" class="delete-btn" data-symbol="${row.symbol}">Remove</button></td>
+            <td>
+              <button type="button" class="info-btn" onclick="showStockDetails('${row.symbol}')">Info</button>
+              <button type="button" class="delete-btn" data-symbol="${row.symbol}">Remove</button>
+            </td>
           `;
           watchlistBody.appendChild(tr);
         });
